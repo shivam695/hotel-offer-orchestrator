@@ -1,0 +1,110 @@
+{
+  "info": {
+    "name": "Hotel Offer Orchestrator",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:3000" }],
+  "item": [
+    {
+      "name": "1. Delhi - overlapping offers (cheapest wins)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/hotels?city=delhi" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status is 200', () => pm.response.to.have.status(200));",
+        "const hotels = pm.response.json();",
+        "pm.test('5 unique hotels', () => pm.expect(hotels).to.have.lengthOf(5));",
+        "pm.test('Holtin is Supplier B at 5340', () => {",
+        "  const h = hotels.find(x => x.name === 'Holtin');",
+        "  pm.expect(h.price).to.eql(5340);",
+        "  pm.expect(h.supplier).to.eql('Supplier B');",
+        "});"
+      ] } }]
+    },
+    {
+      "name": "2. Delhi - price filter 5000 to 6000",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/hotels?city=delhi&minPrice=5000&maxPrice=6000" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status is 200', () => pm.response.to.have.status(200));",
+        "const names = pm.response.json().map(h => h.name);",
+        "pm.test('only Holtin and Radison', () => pm.expect(names).to.have.members(['Holtin', 'Radison']));"
+      ] } }]
+    },
+    {
+      "name": "3. Delhi - only minPrice 9000",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/hotels?city=delhi&minPrice=9000" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status is 200', () => pm.response.to.have.status(200));",
+        "pm.test('3 hotels at 9000 or more', () => pm.expect(pm.response.json()).to.have.lengthOf(3));"
+      ] } }]
+    },
+    {
+      "name": "4. City with no results (paris)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/hotels?city=paris" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status is 200', () => pm.response.to.have.status(200));",
+        "pm.test('empty list', () => pm.expect(pm.response.json()).to.eql([]));"
+      ] } }]
+    },
+    {
+      "name": "5. Missing city (expect 400)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/hotels" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status is 400', () => pm.response.to.have.status(400));"
+      ] } }]
+    },
+    {
+      "name": "6. Invalid price (expect 400)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/hotels?city=delhi&minPrice=abc" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status is 400', () => pm.response.to.have.status(400));"
+      ] } }]
+    },
+    {
+      "name": "7. Health - all up",
+      "request": { "method": "GET", "url": "{{baseUrl}}/health" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status is 200', () => pm.response.to.have.status(200));",
+        "pm.test('status ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+      ] } }]
+    },
+    {
+      "name": "8. Simulate Supplier B DOWN",
+      "request": { "method": "POST", "url": "{{baseUrl}}/supplierB/down" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status is 200', () => pm.response.to.have.status(200));"
+      ] } }]
+    },
+    {
+      "name": "9. Delhi while Supplier B is down (only Supplier A)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/hotels?city=delhi" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status is 200', () => pm.response.to.have.status(200));",
+        "const hotels = pm.response.json();",
+        "pm.test('4 hotels', () => pm.expect(hotels).to.have.lengthOf(4));",
+        "pm.test('all from Supplier A', () => pm.expect(hotels.every(h => h.supplier === 'Supplier A')).to.be.true);"
+      ] } }]
+    },
+    {
+      "name": "10. Health while Supplier B is down (degraded)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/health" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status is 503', () => pm.response.to.have.status(503));",
+        "pm.test('supplierB is down', () => pm.expect(pm.response.json().suppliers.supplierB).to.eql('down'));"
+      ] } }]
+    },
+    {
+      "name": "11. Bring Supplier B back UP",
+      "request": { "method": "POST", "url": "{{baseUrl}}/supplierB/up" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status is 200', () => pm.response.to.have.status(200));"
+      ] } }]
+    },
+    {
+      "name": "12. Delhi after recovery (5 hotels again)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/api/hotels?city=delhi" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('status is 200', () => pm.response.to.have.status(200));",
+        "pm.test('5 hotels', () => pm.expect(pm.response.json()).to.have.lengthOf(5));"
+      ] } }]
+    }
+  ]
+}
