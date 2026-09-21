@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hotel Offer Orchestrator</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 780px; margin: 40px auto; padding: 0 16px; line-height: 1.6; color: #1a1a1a; }
+    h1 { margin-bottom: 4px; }
+    .sub { color: #555; margin-top: 0; }
+    code, pre { background: #f0f0f0; border-radius: 6px; }
+    code { padding: 2px 6px; }
+    pre { padding: 12px; overflow-x: auto; }
+    a { color: #0b5fff; }
+    .btn { display: inline-block; background: #0b5fff; color: #fff; padding: 10px 18px; border-radius: 8px; text-decoration: none; margin-right: 8px; }
+    table { border-collapse: collapse; width: 100%; }
+    td, th { border: 1px solid #ddd; padding: 8px; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>Hotel Offer Orchestrator</h1>
+  <p class="sub">Node.js (TypeScript) · Express · Temporal · Redis · Docker Compose</p>
+
+  <p>
+    <a class="btn" href="https://github.com/shivam695/hotel-offer-orchestrator">View source code</a>
+    <a class="btn" href="https://github.com/shivam695/hotel-offer-orchestrator#readme">Read the README</a>
+  </p>
+
+  <h2>What it does</h2>
+  <p>Fetches hotel offers from two mock suppliers <strong>in parallel</strong> using a Temporal workflow,
+     removes duplicates by hotel name, keeps the cheapest offer for each hotel, and saves the result in Redis
+     so it can be filtered by price range.</p>
+
+  <h2>How it works</h2>
+  <ol>
+    <li><code>GET /api/hotels?city=delhi</code> starts a Temporal workflow.</li>
+    <li>The workflow calls Supplier A and Supplier B in parallel, with automatic retries.</li>
+    <li>Hotels are de-duplicated by name and the cheaper offer wins.</li>
+    <li>The final list is stored in a Redis sorted set where the score is the price.</li>
+    <li>With <code>minPrice</code> and <code>maxPrice</code>, the filtering runs inside Redis (<code>ZRANGEBYSCORE</code>).</li>
+    <li>If one supplier is down, the workflow continues with the other one.</li>
+  </ol>
+
+  <h2>Endpoints</h2>
+  <table>
+    <tr><th>Endpoint</th><th>Purpose</th></tr>
+    <tr><td><code>GET /api/hotels?city=delhi</code></td><td>Best offer per hotel</td></tr>
+    <tr><td><code>GET /api/hotels?city=delhi&amp;minPrice=5000&amp;maxPrice=6000</code></td><td>Price filter inside Redis</td></tr>
+    <tr><td><code>GET /health</code></td><td>Health of both suppliers and Redis</td></tr>
+    <tr><td><code>GET /supplierA/hotels</code>, <code>/supplierB/hotels</code></td><td>Mock suppliers</td></tr>
+  </table>
+
+  <h2>Sample response</h2>
+<pre>[
+  { "name": "Holtin",  "price": 5340, "supplier": "Supplier B", "commissionPct": 20 },
+  { "name": "Radison", "price": 5900, "supplier": "Supplier A", "commissionPct": 13 }
+]</pre>
+
+  <h2>Run it yourself</h2>
+<pre>git clone https://github.com/shivam695/hotel-offer-orchestrator.git
+cd hotel-offer-orchestrator
+docker compose up --build</pre>
+  <p>Then open <code>http://localhost:3000</code>. The Temporal dashboard is at <code>http://localhost:8233</code>.</p>
+
+  <h2>Testing</h2>
+  <p>A Postman collection is included in the <code>postman/</code> folder: 12 requests and 22 automated tests
+     covering overlapping offers, price filters, a city with no results, invalid input, health checks and a supplier outage.
+     All 22 tests pass.</p>
+</body>
+</html>
