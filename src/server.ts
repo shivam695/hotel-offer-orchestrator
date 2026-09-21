@@ -75,5 +75,42 @@ app.get('/health', async (_req, res) => {
     redis: redisStatus,
   });
 });
+// Landing page
+app.get('/', (_req, res) => {
+  res.type('html').send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hotel Offer Orchestrator</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 16px; line-height: 1.6; color: #1a1a1a; }
+    code { background: #f0f0f0; padding: 2px 6px; border-radius: 4px; }
+    a { color: #0b5fff; }
+    li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <h1>Hotel Offer Orchestrator</h1>
+  <p>Fetches hotel offers from two mock suppliers <strong>in parallel</strong> using a Temporal workflow,
+     removes duplicates by hotel name, keeps the cheapest offer per hotel, and stores the result in Redis
+     so it can be filtered by price range.</p>
+
+  <h2>Try it</h2>
+  <ul>
+    <li><a href="/api/hotels?city=delhi">/api/hotels?city=delhi</a> : best offer per hotel</li>
+    <li><a href="/api/hotels?city=delhi&minPrice=5000&maxPrice=6000">/api/hotels?city=delhi&amp;minPrice=5000&amp;maxPrice=6000</a> : price filter (done inside Redis)</li>
+    <li><a href="/api/hotels?city=paris">/api/hotels?city=paris</a> : city with no results</li>
+    <li><a href="/health">/health</a> : health of both suppliers and Redis</li>
+    <li><a href="/supplierA/hotels?city=delhi">/supplierA/hotels</a> and <a href="/supplierB/hotels?city=delhi">/supplierB/hotels</a> : the mock suppliers</li>
+  </ul>
+
+  <h2>Stack</h2>
+  <p>Node.js (TypeScript), Express, Temporal, Redis, Docker Compose.</p>
+
+  <p><a href="https://github.com/shivam695/hotel-offer-orchestrator">Source code and README on GitHub</a></p>
+</body>
+</html>`);
+});
 
 app.listen(config.port, () => console.log(`Server running on http://localhost:${config.port}`));
